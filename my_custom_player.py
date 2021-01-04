@@ -1,5 +1,8 @@
-
 from sample_players import DataPlayer
+import pickle
+import random
+import copy
+import math
 
 
 class CustomPlayer(DataPlayer):
@@ -42,5 +45,75 @@ class CustomPlayer(DataPlayer):
         # EXAMPLE: choose a random move without any search--this function MUST
         #          call self.queue.put(ACTION) at least once before time expires
         #          (the timer is automatically managed for you)
-        import random
-        self.queue.put(random.choice(state.actions()))
+
+        if state.ply_count < 2:
+          self.queue.put(random.choice(state.actions()))
+        else:
+          self.queue.put(self.alpha_beta_pruning(state, float("-inf"), float("inf"), 4))
+        
+    def alpha_beta_pruning(self, state, alpha, beta, depth = 4):
+        
+        def min_value(state, alpha, beta, depth = 4):
+            if state.terminal_test(): 
+              return state.utility(self.player_id)
+            if depth <= 0:
+              return self.offensive_to_defensive_score(state, depth)
+            value = float("inf")
+            for action in state.actions():
+                value = min(value, max_value(state.result(action), alpha, beta, depth - 1))
+                if alpha >= value:
+                  return alpha
+                else:
+                  beta = value
+            return value
+
+        def max_value(state, alpha, beta, depth = 4):
+            if state.terminal_test(): 
+              return state.utility(self.player_id)
+            if depth <= 0:
+              return self.offensive_to_defensive_score(state, depth)
+            value = float("-inf")
+            for action in state.actions():
+              value = max(value, min_value(state.result(action), alpha, beta, depth - 1))
+              if beta <= value:
+                return beta
+              else:
+                alpha = value
+            return value
+
+        return max(state.actions(), key = lambda x: min_value(state.result(x), alpha, beta, depth))
+
+    def baseline_score(self, state, depth = 1):
+        own_loc = state.locs[self.player_id]
+        opp_loc = state.locs[1 - self.player_id]
+        own_liberties = state.liberties(own_loc)
+        opp_liberties = state.liberties(opp_loc)
+        return len(own_liberties) - len(opp_liberties)
+    
+    def defensive_score(self, state, depth = 1):
+        own_loc = state.locs[self.player_id]
+        opp_loc = state.locs[1 - self.player_id]
+        own_liberties = state.liberties(own_loc)
+        opp_liberties = state.liberties(opp_loc)
+        return 2 * len(own_liberties) - len(opp_liberties)
+    
+    def offensive_score(self, state, depth = 1):
+        own_loc = state.locs[self.player_id]
+        opp_loc = state.locs[1 - self.player_id]
+        own_liberties = state.liberties(own_loc)
+        opp_liberties = state.liberties(opp_loc)
+        return len(own_liberties) - 2 * len(opp_liberties)
+    
+    def defensive_to_offensive_score(self, state, depth = 1):
+        own_loc = state.locs[self.player_id]
+        opp_loc = state.locs[1 - self.player_id]
+        own_liberties = state.liberties(own_loc)
+        opp_liberties = state.liberties(opp_loc)
+        return len(own_liberties) - max(1, 4 - depth) * len(opp_liberties)
+    
+    def offensive_to_defensive_score(self, state, depth = 1):
+        own_loc = state.locs[self.player_id]
+        opp_loc = state.locs[1 - self.player_id]
+        own_liberties = state.liberties(own_loc)
+        opp_liberties = state.liberties(opp_loc)
+        return len(own_liberties) - max(1, depth) * len(opp_liberties)

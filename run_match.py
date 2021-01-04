@@ -161,7 +161,7 @@ if __name__ == "__main__":
         """
     )
     parser.add_argument(
-        '-o', '--opponent', type=str, default='MINIMAX', choices=list(TEST_AGENTS.keys()),
+        '-o', '--opponent', type=str, default='GREEDY', choices=list(TEST_AGENTS.keys()),
         help="""\
             Choose an agent for testing. The random and greedy agents may be useful 
             for initial testing because they run more quickly than the minimax agent.
